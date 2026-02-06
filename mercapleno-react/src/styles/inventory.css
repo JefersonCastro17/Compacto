@@ -1,0 +1,204 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+:root {
+  --catalog-ink: #0f172a;
+  --catalog-muted: #64748b;
+  --catalog-bg: #f6f9ff;
+  --catalog-accent: #0ea5e9;
+  --catalog-accent-dark: #0284c7;
+  --catalog-warm: #f59e0b;
+  --catalog-card: rgba(255, 255, 255, 0.95);
+  --catalog-border: rgba(148, 163, 184, 0.25);
+  --catalog-shadow: 0 16px 38px rgba(15, 23, 42, 0.08);
+}
+
+.inventory-page-container {
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  padding: 26px 18px 70px;
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, rgba(14, 165, 233, 0.15), transparent 42%),
+    radial-gradient(circle at 20% 60%, rgba(245, 158, 11, 0.12), transparent 50%),
+    linear-gradient(180deg, var(--catalog-bg) 0%, #eef3fb 100%);
+}
+
+.catalog-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.catalog-title h1 {
+  font-family: "Fraunces", Georgia, serif;
+  margin: 6px 0;
+  font-size: clamp(28px, 3vw, 38px);
+  color: var(--catalog-ink);
+}
+
+.catalog-title p {
+  margin: 0;
+  color: var(--catalog-muted);
+}
+
+.catalog-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  font-size: 12px;
+  color: var(--catalog-accent-dark);
+  font-weight: 600;
+}
+
+.catalog-stats {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  background: var(--catalog-card);
+  border: 1px solid var(--catalog-border);
+  border-radius: 14px;
+  padding: 12px 16px;
+  min-width: 120px;
+  box-shadow: var(--catalog-shadow);
+}
+
+.stat-card span {
+  display: block;
+  font-size: 12px;
+  color: var(--catalog-muted);
+}
+
+.stat-card strong {
+  font-size: 20px;
+  color: var(--catalog-ink);
+}
+
+.filtros {
+  margin: 20px 0 30px;
+  padding: 18px;
+  background: var(--catalog-card);
+  border-radius: 16px;
+  border: 1px solid var(--catalog-border);
+  box-shadow: var(--catalog-shadow);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+}
+
+.filtros input,
+.filtros select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: white;
+  font-family: inherit;
+}
+
+.filtros .boton-nav {
+  background: linear-gradient(135deg, var(--catalog-accent), var(--catalog-accent-dark));
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2);
+}
+
+.filtros .boton-nav:hover {
+  transform: translateY(-1px);
+}
+
+.catalog-loading,
+.catalog-empty {
+  text-align: center;
+  color: var(--catalog-muted);
+  margin: 40px 0;
+}
+
+.catalogo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.producto {
+  background: var(--catalog-card);
+  border-radius: 16px;
+  padding: 16px;
+  text-align: left;
+  border: 1px solid var(--catalog-border);
+  box-shadow: var(--catalog-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.producto:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 40px rgba(15, 23, 42, 0.12);
+}
+
+.nombre {
+  font-weight: 600;
+  color: var(--catalog-ink);
+  margin: 0;
+}
+
+.precio {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--catalog-accent-dark);
+  margin: 0;
+}
+
+.imagen {
+  width: 100%;
+  height: 160px;
+  border-radius: 12px;
+  background: linear-gradient(140deg, rgba(14, 165, 233, 0.12), rgba(245, 158, 11, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.imagen img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.botones {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.botoncito_producto {
+  width: 100%;
+  background: var(--catalog-warm);
+  color: #1f2937;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.botoncito_producto:hover {
+  background: #fbbf24;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .catalog-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
