@@ -1,16 +1,54 @@
-const { Resend } = require("resend");
+﻿const nodemailer = require("nodemailer");
 
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+const SMTP_SERVICE = process.env.SMTP_SERVICE;
+const SMTP_HOST = process.env.SMTP_HOST;
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || "587", 10);
+const SMTP_SECURE = String(process.env.SMTP_SECURE || "false").toLowerCase() === "true";
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
+const SMTP_FROM_EMAIL = process.env.SMTP_FROM_EMAIL || SMTP_USER;
 const APP_NAME = process.env.APP_NAME || "Mercapleno";
 
-const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+let transporter = null;
 
-const ensureResend = () => {
-  if (!resend) {
-    throw new Error("RESEND_API_KEY not configured");
+const ensureTransporter = () => {
+  if (transporter) return transporter;
+
+  if (!SMTP_USER || !SMTP_PASS) {
+    throw new Error("SMTP not configured: missing SMTP_USER/SMTP_PASS");
   }
+
+  if (!SMTP_FROM_EMAIL) {
+    throw new Error("SMTP not configured: missing SMTP_FROM_EMAIL");
+  }
+
+  if (!SMTP_SERVICE && !SMTP_HOST) {
+    throw new Error("SMTP not configured: missing SMTP_HOST");
+  }
+
+  const options = SMTP_SERVICE
+    ? {
+        service: SMTP_SERVICE,
+        auth: {
+          user: SMTP_USER,
+          pass: SMTP_PASS
+        }
+      }
+    : {
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_SECURE,
+        auth: {
+          user: SMTP_USER,
+          pass: SMTP_PASS
+        }
+      };
+
+  transporter = nodemailer.createTransport(options);
+  return transporter;
 };
+
+const formatFrom = () => (APP_NAME ? `"${APP_NAME}" <${SMTP_FROM_EMAIL}>` : SMTP_FROM_EMAIL);
 
 const buildVerificationEmail = (code, ttlMinutes) => ({
   subject: `${APP_NAME} - Codigo de verificacion`,
@@ -37,10 +75,10 @@ const buildResetEmail = (code, ttlMinutes) => ({
 });
 
 const sendVerificationCode = async (to, code, ttlMinutes) => {
-  ensureResend();
+  const smtp = ensureTransporter();
   const payload = buildVerificationEmail(code, ttlMinutes);
-  return resend.emails.send({
-    from: RESEND_FROM_EMAIL,
+  return smtp.sendMail({
+    from: formatFrom(),
     to,
     subject: payload.subject,
     html: payload.html,
@@ -49,10 +87,10 @@ const sendVerificationCode = async (to, code, ttlMinutes) => {
 };
 
 const sendPasswordResetCode = async (to, code, ttlMinutes) => {
-  ensureResend();
+  const smtp = ensureTransporter();
   const payload = buildResetEmail(code, ttlMinutes);
-  return resend.emails.send({
-    from: RESEND_FROM_EMAIL,
+  return smtp.sendMail({
+    from: formatFrom(),
     to,
     subject: payload.subject,
     html: payload.html,
