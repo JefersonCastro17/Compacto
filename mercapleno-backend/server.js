@@ -8,6 +8,8 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const PORT = 4000;
+const swaggerUi = require("swagger-ui-express");
+const swaggerDocument = require("./swagger-output.json");
 
 // --- 1. Importar Conexión a Base de Datos ---
 // Usamos './db' porque el archivo está en la misma carpeta raíz
@@ -24,6 +26,9 @@ const movimientosRouter = require("./routes/movimientos");
 // --- 3. Middleware Global ---
 app.use(cors()); // Permite peticiones desde el frontend (React)
 app.use(express.json()); // Permite leer cuerpos JSON en req.body
+
+// Swagger UI (OpenAPI autogenerado)
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // --- 4. Enrutamiento (Endpoints) ---
 

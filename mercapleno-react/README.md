@@ -143,10 +143,9 @@ Inventario y productos:
 - `GET /api/productos`
 - `POST /api/movimientos/*`
 
-**Swagger / OpenAPI**
-- Especificacion: `mercapleno-react/public/openapi.yaml`
-- UI: `http://localhost:3000/swagger/index.html`
-- Si cambias el host/puerto del backend, actualiza `servers.url` en `mercapleno-react/public/openapi.yaml`
+**Swagger / OpenAPI (Backend - auto)**
+- UI: `http://localhost:4000/api-docs`
+- Se genera automaticamente con `swagger-autogen` al iniciar el backend.
 
 **PDF Y Tickets**
 - El PDF de reportes se descarga o se imprime desde Estadisticas (usa token).
