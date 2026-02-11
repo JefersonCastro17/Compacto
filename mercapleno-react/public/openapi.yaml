@@ -1,0 +1,1010 @@
+﻿openapi: 3.0.3
+info:
+  title: Mercapleno API
+  version: 1.0.0
+  description: API documentation for Mercapleno backend. Generated from frontend usage; adjust as backend evolves.
+servers:
+  - url: http://localhost:4000
+
+tags:
+  - name: Auth
+    description: Authentication and account flows
+  - name: Admin Users
+    description: Admin user management
+  - name: Products
+    description: CRUD for products catalog
+  - name: Sales
+    description: Sales catalog and orders
+  - name: Reports
+    description: Sales reports
+  - name: Inventory
+    description: Inventory movements
+
+paths:
+  /api/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Register ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/auth/verify-email:
+    post:
+      tags:
+        - Auth
+      summary: Verify email code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+      responses:
+        '200':
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/auth/resend-verification:
+    post:
+      tags:
+        - Auth
+      summary: Resend verification code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailOnlyRequest'
+      responses:
+        '200':
+          description: Code sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/auth/request-password-reset:
+    post:
+      tags:
+        - Auth
+      summary: Request password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailOnlyRequest'
+      responses:
+        '200':
+          description: Reset code sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/auth/reset-password:
+    post:
+      tags:
+        - Auth
+      summary: Reset password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/admin/users:
+    get:
+      tags:
+        - Admin Users
+      summary: List users
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Users list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+    post:
+      tags:
+        - Admin Users
+      summary: Create user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+      responses:
+        '200':
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/admin/users/{id}:
+    put:
+      tags:
+        - Admin Users
+      summary: Update user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+      responses:
+        '200':
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      tags:
+        - Admin Users
+      summary: Delete user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/productos:
+    get:
+      tags:
+        - Products
+      summary: List products (admin)
+      responses:
+        '200':
+          description: Product list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+    post:
+      tags:
+        - Products
+      summary: Create product (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreateRequest'
+      responses:
+        '200':
+          description: Product created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/productos/{id}:
+    put:
+      tags:
+        - Products
+      summary: Update product (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdateRequest'
+      responses:
+        '200':
+          description: Product updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      tags:
+        - Products
+      summary: Delete product (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Product deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/sales/products:
+    get:
+      tags:
+        - Sales
+      summary: List products for sales catalog
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: precioMin
+          in: query
+          required: false
+          schema:
+            type: number
+        - name: precioMax
+          in: query
+          required: false
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Sales catalog products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SalesProduct'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/sales/categories:
+    get:
+      tags:
+        - Sales
+      summary: List product categories for sales catalog
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Category list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/sales/orders:
+    post:
+      tags:
+        - Sales
+      summary: Create order
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderRequest'
+      responses:
+        '200':
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/sales/reports/ventas-mes:
+    get:
+      tags:
+        - Reports
+      summary: Sales by month
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: inicio
+          in: query
+          required: false
+          schema:
+            type: string
+            description: Start month (YYYY-MM)
+        - name: fin
+          in: query
+          required: false
+          schema:
+            type: string
+            description: End month (YYYY-MM)
+      responses:
+        '200':
+          description: Monthly sales
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportVentasMesItem'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/sales/reports/top-productos:
+    get:
+      tags:
+        - Reports
+      summary: Top products
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Top products list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportTopProductoItem'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/sales/reports/resumen:
+    get:
+      tags:
+        - Reports
+      summary: KPI summary
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: KPI summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResumen'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/sales/reports/resumen-mes:
+    get:
+      tags:
+        - Reports
+      summary: Monthly summary
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Monthly summary
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportResumenMesItem'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/sales/reports/pdf-resumen:
+    get:
+      tags:
+        - Reports
+      summary: Download PDF summary
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: PDF file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/movimientos/productos:
+    get:
+      tags:
+        - Inventory
+      summary: List products with stock for inventory movements
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Products list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InventoryProduct'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+  /api/movimientos/registrar:
+    post:
+      tags:
+        - Inventory
+      summary: Register inventory movement
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryMovementRequest'
+      responses:
+        '200':
+          description: Movement registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+        '403':
+          $ref: '#/components/responses/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    ErrorResponse:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      additionalProperties: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        error:
+          type: string
+        code:
+          type: string
+      additionalProperties: true
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+      additionalProperties: true
+
+    RegisterRequest:
+      type: object
+      required:
+        - nombre
+        - apellido
+        - email
+        - password
+        - direccion
+        - fecha_nacimiento
+        - id_rol
+        - id_tipo_identificacion
+        - numero_identificacion
+      properties:
+        nombre:
+          type: string
+        apellido:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        direccion:
+          type: string
+        fecha_nacimiento:
+          type: string
+          format: date
+        id_rol:
+          type: integer
+        id_tipo_identificacion:
+          type: integer
+        numero_identificacion:
+          type: string
+
+    VerifyEmailRequest:
+      type: object
+      required:
+        - email
+        - code
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+
+    EmailOnlyRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - email
+        - code
+        - newPassword
+      properties:
+        email:
+          type: string
+          format: email
+        code:
+          type: string
+        newPassword:
+          type: string
+          format: password
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        apellido:
+          type: string
+        email:
+          type: string
+          format: email
+        direccion:
+          type: string
+        fecha_nacimiento:
+          type: string
+          format: date
+        id_rol:
+          type: integer
+        id_tipo_identificacion:
+          type: integer
+        numero_identificacion:
+          type: string
+      additionalProperties: true
+
+    UserListResponse:
+      type: object
+      properties:
+        usuarios:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+      additionalProperties: true
+
+    UserCreateRequest:
+      type: object
+      required:
+        - nombre
+        - apellido
+        - email
+        - password
+        - direccion
+        - fecha_nacimiento
+        - id_rol
+        - id_tipo_identificacion
+        - numero_identificacion
+      properties:
+        nombre:
+          type: string
+        apellido:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        direccion:
+          type: string
+        fecha_nacimiento:
+          type: string
+          format: date
+        id_rol:
+          type: integer
+        id_tipo_identificacion:
+          type: integer
+        numero_identificacion:
+          type: string
+
+    UserUpdateRequest:
+      type: object
+      properties:
+        nombre:
+          type: string
+        apellido:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        direccion:
+          type: string
+        fecha_nacimiento:
+          type: string
+          format: date
+        id_rol:
+          type: integer
+        id_tipo_identificacion:
+          type: integer
+        numero_identificacion:
+          type: string
+
+    Product:
+      type: object
+      properties:
+        id_productos:
+          type: integer
+        nombre:
+          type: string
+        precio:
+          type: number
+        id_categoria:
+          type: integer
+        id_proveedor:
+          type: integer
+        descripcion:
+          type: string
+        estado:
+          type: string
+        imagen:
+          type: string
+      additionalProperties: true
+
+    ProductCreateRequest:
+      type: object
+      required:
+        - nombre
+        - precio
+        - id_categoria
+        - id_proveedor
+        - estado
+      properties:
+        nombre:
+          type: string
+        precio:
+          type: number
+        id_categoria:
+          type: integer
+        id_proveedor:
+          type: integer
+        descripcion:
+          type: string
+        estado:
+          type: string
+        imagen:
+          type: string
+
+    ProductUpdateRequest:
+      type: object
+      properties:
+        id_productos:
+          type: integer
+        nombre:
+          type: string
+        precio:
+          type: number
+        id_categoria:
+          type: integer
+        id_proveedor:
+          type: integer
+        descripcion:
+          type: string
+        estado:
+          type: string
+        imagen:
+          type: string
+
+    SalesProduct:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        precio:
+          type: number
+        categoria:
+          type: string
+        imagen:
+          type: string
+        stock:
+          type: integer
+      additionalProperties: true
+
+    Category:
+      type: object
+      properties:
+        value:
+          type: string
+        label:
+          type: string
+      additionalProperties: true
+
+    OrderRequest:
+      type: object
+      required:
+        - items
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - id
+              - cantidad
+            properties:
+              id:
+                type: integer
+              cantidad:
+                type: integer
+        total:
+          type: number
+        id_metodo:
+          type: integer
+      additionalProperties: true
+
+    ReportVentasMesItem:
+      type: object
+      properties:
+        mes:
+          type: string
+        total:
+          type: number
+      additionalProperties: true
+
+    ReportTopProductoItem:
+      type: object
+      properties:
+        nombre:
+          type: string
+        total_vendido:
+          type: number
+      additionalProperties: true
+
+    ReportResumen:
+      type: object
+      properties:
+        dinero_total:
+          type: number
+        total_ventas:
+          type: number
+        promedio:
+          type: number
+      additionalProperties: true
+
+    ReportResumenMesItem:
+      type: object
+      properties:
+        mes:
+          type: string
+        cantidad_ventas:
+          type: number
+        total_mes:
+          type: number
+      additionalProperties: true
+
+    InventoryProduct:
+      type: object
+      properties:
+        id:
+          type: integer
+        nombre:
+          type: string
+        categoria:
+          type: string
+        precio:
+          type: number
+        stock:
+          type: integer
+        imagen:
+          type: string
+      additionalProperties: true
+
+    InventoryMovementRequest:
+      type: object
+      required:
+        - id_producto
+        - tipo_movimiento
+        - cantidad
+        - id_documento
+      properties:
+        id_producto:
+          type: integer
+        tipo_movimiento:
+          type: string
+          enum:
+            - ENTRADA
+            - SALIDA
+        cantidad:
+          type: integer
+        id_documento:
+          type: string
+        comentario:
+          type: string
+      additionalProperties: true
