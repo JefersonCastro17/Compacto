@@ -5,6 +5,7 @@ import { useAuthContext } from "../context/AuthContext";
 import { formatPrice } from "../services/productData"; // Para mostrar precios
 import { useNavigate } from "react-router-dom"; 
 import "../styles/Lista_productos.css"; // Reutilizar estilos de tabla/CRUD para la UI
+import { resolveImageUrl, FALLBACK_IMAGE } from "../services/imageUtils";
 
 // ===========================================
 // COMPONENTE MODAL DE REGISTRO DE MOVIMIENTO
@@ -281,9 +282,9 @@ export default function RegistroMovimientos() {
                                                 <td>{p.id}</td>
                                                 <td>
                                                     <img 
-                                                        src={p.imagen || "https://via.placeholder.com/50"} 
+                                                        src={resolveImageUrl(p.imagen)} 
                                                         alt={p.nombre} 
-                                                        onError={(e) => {e.target.src="https://via.placeholder.com/50"}}
+                                                        onError={(e) => {e.target.onerror = null; e.target.src = FALLBACK_IMAGE;}}
                                                         style={{ width: '50px', height: '50px', objectFit: 'cover' }}
                                                     />
                                                 </td>

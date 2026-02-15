@@ -3,13 +3,13 @@
 import React from 'react';
 import { useCartContext } from '../../context/CartContext';
 import { formatPrice } from '../../services/productData';
+import { resolveImageUrl, FALLBACK_IMAGE } from '../../services/imageUtils';
 
 function CartItem({ item }) {
   const { setItemQuantity, removeFromCart } = useCartContext();
   const subtotal = item.price * item.cantidad;
   
-  // URL de imagen de fallback
-  const fallbackImage = "https://via.placeholder.com/50?text=IMG";
+  const imageSrc = resolveImageUrl(item.image);
 
   const handleIncrement = () => {
     setItemQuantity(item.id, item.cantidad + 1);
@@ -28,11 +28,11 @@ function CartItem({ item }) {
       <div className="producto-carrito-info">
         {/* 🔑 CORRECCIÓN CRÍTICA: Usamos item.image directamente */}
         <img 
-            src={item.image} 
+            src={imageSrc} 
             alt={item.nombre} 
             onError={(e) => {
                 e.target.onerror = null; 
-                e.target.src = fallbackImage; 
+                e.target.src = FALLBACK_IMAGE; 
             }}
         />
         <div>

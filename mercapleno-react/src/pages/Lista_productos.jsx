@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react"; 
 import '../styles/Lista_productos.css';
+import { resolveImageUrl, FALLBACK_IMAGE } from '../services/imageUtils';
 
 
 const ModalAgregar = ({ onCerrar, onGuardar }) => {
@@ -53,7 +54,7 @@ const ModalAgregar = ({ onCerrar, onGuardar }) => {
                     <label>Estado:</label>
                     <input type="text" name="estado" value={formData.estado} onChange={handleChange} required />
 
-                    <label>URL de Imagen:</label>
+                    <label>Imagen (local, public/images/productos):</label>
                     <input type="text" name="imagen" value={formData.imagen} onChange={handleChange} />
 
                     <div className="modal-actions">
@@ -114,7 +115,7 @@ const ModalEdicion = ({ producto, onCerrar, onGuardar }) => {
                     <label>Estado:</label>
                     <input type="text" name="estado" value={formData.estado} onChange={handleChange} required />
 
-                    <label>URL de Imagen:</label>
+                    <label>Imagen (local, public/images/productos):</label>
                     <input type="text" name="imagen" value={formData.imagen} onChange={handleChange} />
                     
                     <div className="modal-actions">
@@ -311,9 +312,9 @@ export default function Lista_productos() {
                                                 <td>{p.estado}</td>
                                                 <td className="img-cell">
                                                     <img 
-                                                        src={p.imagen} 
+                                                        src={resolveImageUrl(p.imagen)} 
                                                         alt={p.nombre} 
-                                                        onError={(e) => {e.target.src="https://via.placeholder.com/50"}}
+                                                        onError={(e) => {e.target.onerror = null; e.target.src = FALLBACK_IMAGE;}}
                                                     />
                                                 </td>
                                                 <td className="action-cell">

@@ -8,22 +8,31 @@ import "./styles/registro.css";
 function Recuperar() {
   const navigate = useNavigate();
 
-  const [step, setStep] = useState("request");
-  const [email, setEmail] = useState("");
-  const [code, setCode] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  /*
+    Controlled Components (Componentes controlados):
+    - Definicion: el valor de cada input vive en el estado de React.
+    - Como se logra: se usa value={estado} + onChange={setEstado}.
+    - Por que aqui: validacion, mensajes y flujo por pasos sin leer el DOM.
+    - Resultado: React controla el formulario y sus datos en todo momento.
+  */
+  const [step, setStep] = useState("request"); // Estado que controla que formulario se muestra
+  const [email, setEmail] = useState(""); // Controlled: valor del input email
+  const [code, setCode] = useState(""); // Controlled: valor del input codigo
+  const [newPassword, setNewPassword] = useState(""); // Controlled: valor del input nueva contrasena
+  const [confirmPassword, setConfirmPassword] = useState(""); // Controlled: valor del input confirmar
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleRequest = async (e) => {
     e.preventDefault();
+    // Se usan valores del estado (email), no se lee el DOM.
     setLoading(true);
     setMessage("");
     setMessageType("");
 
     try {
+      // El payload sale del estado controlado (email).
       const response = await fetch("http://localhost:4000/api/auth/request-password-reset", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -53,6 +62,7 @@ function Recuperar() {
 
   const handleReset = async (e) => {
     e.preventDefault();
+    // Se usan valores del estado (email, code, newPassword, confirmPassword).
     setLoading(true);
     setMessage("");
     setMessageType("");
@@ -65,6 +75,7 @@ function Recuperar() {
     }
 
     try {
+      // El payload sale del estado controlado (email, code, newPassword).
       const response = await fetch("http://localhost:4000/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118,11 +129,12 @@ function Recuperar() {
             <form onSubmit={handleRequest}>
               <div className="form-group">
                 <label htmlFor="resetEmail">Correo Electronico</label>
+                {/* Controlled Component: value toma el dato del estado */}
                 <input
                   type="email"
                   id="resetEmail"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)} // onChange actualiza el estado
                   required
                 />
               </div>
@@ -137,44 +149,48 @@ function Recuperar() {
             <form onSubmit={handleReset}>
               <div className="form-group">
                 <label htmlFor="resetEmailConfirm">Correo Electronico</label>
+                {/* Controlled Component: value toma el dato del estado (se mantiene entre pasos) */}
                 <input
                   type="email"
                   id="resetEmailConfirm"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => setEmail(e.target.value)} // onChange actualiza el estado
                   required
                 />
               </div>
 
               <div className="form-group">
                 <label htmlFor="resetCode">Codigo</label>
+                {/* Controlled Component: value toma el dato del estado */}
                 <input
                   type="text"
                   id="resetCode"
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
+                  onChange={(e) => setCode(e.target.value)} // onChange actualiza el estado
                   required
                 />
               </div>
 
               <div className="form-group">
                 <label htmlFor="newPassword">Nueva Contrasena</label>
+                {/* Controlled Component: value toma el dato del estado */}
                 <input
                   type="password"
                   id="newPassword"
                   value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  onChange={(e) => setNewPassword(e.target.value)} // onChange actualiza el estado
                   required
                 />
               </div>
 
               <div className="form-group">
                 <label htmlFor="confirmPassword">Confirmar Contrasena</label>
+                {/* Controlled Component: value toma el dato del estado */}
                 <input
                   type="password"
                   id="confirmPassword"
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => setConfirmPassword(e.target.value)} // onChange actualiza el estado
                   required
                 />
               </div>

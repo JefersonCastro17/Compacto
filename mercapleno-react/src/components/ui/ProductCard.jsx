@@ -3,6 +3,7 @@
 import React from 'react';
 import { useCartContext } from '../../context/CartContext';
 import { formatPrice } from '../../services/productData';
+import { resolveImageUrl, FALLBACK_IMAGE } from '../../services/imageUtils';
 
 function ProductCard({ product }) {
   const { addToCart } = useCartContext();
@@ -11,8 +12,7 @@ function ProductCard({ product }) {
     addToCart(product);
   };
     
-  // URL de imagen de fallback por si la de la DB falla
-  const fallbackImage = "https://via.placeholder.com/200?text=No+Image";
+  const imageSrc = resolveImageUrl(product.image);
 
 
   return (
@@ -27,12 +27,12 @@ function ProductCard({ product }) {
       <div className="imagen">
         {/* 🔑 CORRECCIÓN CRÍTICA: Usamos product.image directamente sin prefijo local. */}
         <img 
-            src={product.image} 
+            src={imageSrc} 
             alt={product.nombre} 
             // Manejo de error para asegurar que se muestre algo si la URL de internet falla
             onError={(e) => {
                 e.target.onerror = null; 
-                e.target.src = fallbackImage; 
+                e.target.src = FALLBACK_IMAGE; 
             }}
         />
       </div>
