@@ -1,0 +1,194 @@
+﻿import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { PoolConnection } from 'mysql2/promise';
+import { MysqlService } from '../common/database/mysql.service';
+import { CreateOrderDto } from './dto/create-order.dto';
+
+const DOCUMENTO_VENTA_ID = 'CC';
+const MOVIMIENTO_VENTA_ID = 2;
+
+@Injectable()
+export class SalesService {
+  constructor(private readonly db: MysqlService) {}
+
+  async getFilteredProducts(filters: {
+    search?: string;
+    category?: string;
+    precioMin?: string;
+    precioMax?: string;
+  }) {
+    let sql = `
+      SELECT
+        p.id_productos AS id,
+        p.nombre,
+        p.descripcion,
+        p.precio,
+        c.nombre AS category,
+        p.imagen AS image,
+        COALESCE(sa.stock, 0) AS stock
+      FROM productos p
+      LEFT JOIN stock_actual sa ON p.id_productos = sa.id_productos
+      LEFT JOIN categoria c ON p.id_categoria = c.id_categoria
+      WHERE p.estado = 'Disponible'
+      AND COALESCE(sa.stock, 0) > 0
+    `;
+
+    const params: any[] = [];
+
+    if (filters.category && filters.category !== 'todas') {
+      sql += ' AND LOWER(c.nombre) = LOWER(?)';
+      params.push(filters.category);
+    }
+
+    if (filters.search) {
+      sql += ' AND p.nombre LIKE ?';
+      params.push(`%${filters.search}%`);
+    }
+
+    const minValue = Number(filters.precioMin);
+    if (!Number.isNaN(minValue)) {
+      sql += ' AND p.precio >= ?';
+      params.push(minValue);
+    }
+
+    const maxValue = Number(filters.precioMax);
+    if (!Number.isNaN(maxValue)) {
+      sql += ' AND p.precio <= ?';
+      params.push(maxValue);
+    }
+
+    sql += ' ORDER BY p.nombre ASC';
+
+    const [rows] = await this.db.query<any>(sql, params);
+    return rows.map((row: any) => ({
+      id: String(row.id),
+      nombre: row.nombre,
+      descripcion: row.descripcion || '',
+      price: Number(row.precio),
+      category: (row.category || 'otros').toLowerCase(),
+      image: row.image,
+      stock: Number(row.stock || 0),
+    }));
+  }
+
+  async getAvailableCategories() {
+    const sql = `
+      SELECT
+        c.nombre AS category,
+        COUNT(p.id_productos) AS product_count
+      FROM categoria c
+      JOIN productos p ON c.id_categoria = p.id_categoria
+      JOIN stock_actual sa ON p.id_productos = sa.id_productos
+      WHERE sa.stock > 0
+      GROUP BY c.nombre
+      ORDER BY c.nombre
+    `;
+
+    const [rows] = await this.db.query<any>(sql);
+    return rows.map((row: any) => ({
+      value: String(row.category).toLowerCase(),
+      label: String(row.category).charAt(0).toUpperCase() + String(row.category).slice(1),
+      count: Number(row.product_count),
+    }));
+  }
+
+  async createOrder(dto: CreateOrderDto, userId?: number) {
+    const idMetodo = dto.id_metodo ?? dto.metodo_pago;
+    if (!idMetodo) {
+      throw new BadRequestException({ error: 'Datos de orden incompletos o invalidos.' });
+    }
+
+    const idUsuario = Number.isFinite(Number(userId)) ? Number(userId) : 1;
+
+    let connection: PoolConnection | null = null;
+    try {
+      connection = await this.db.getConnection();
+      await connection.beginTransaction();
+
+      const [ventaResult] = await connection.query<any>(
+        `
+          INSERT INTO venta (id_documento, id_usuario, id_metodo, fecha, total)
+          VALUES (?, ?, ?, NOW(), ?)
+        `,
+        [DOCUMENTO_VENTA_ID, idUsuario, idMetodo, dto.total],
+      );
+
+      const idVenta = ventaResult.insertId;
+      if (!idVenta) {
+        throw new InternalServerErrorException('No se genero la venta');
+      }
+
+      for (const item of dto.items) {
+        const idProducto = Number(item.id);
+        const cantidad = Number(item.cantidad);
+
+        const [[producto]] = await connection.query<any[]>(
+          `
+            SELECT p.precio, sa.stock
+            FROM productos p
+            JOIN stock_actual sa ON p.id_productos = sa.id_productos
+            WHERE p.id_productos = ?
+            FOR UPDATE
+          `,
+          [idProducto],
+        );
+
+        if (!producto || producto.stock < cantidad) {
+          throw new ConflictException({
+            error: 'Stock Insuficiente',
+            message: `El producto ID ${idProducto} no tiene la cantidad solicitada disponible.`,
+          });
+        }
+
+        await connection.query(
+          `
+            INSERT INTO venta_productos (id_venta, id_productos, cantidad, precio)
+            VALUES (?, ?, ?, ?)
+          `,
+          [idVenta, idProducto, cantidad, producto.precio],
+        );
+
+        await connection.query(
+          `
+            INSERT INTO salida_productos (id_productos, cantidad, fecha, id_documento, id_usuario, id_movimiento)
+            VALUES (?, ?, NOW(), ?, ?, ?)
+          `,
+          [idProducto, cantidad, DOCUMENTO_VENTA_ID, idUsuario, MOVIMIENTO_VENTA_ID],
+        );
+
+        await connection.query(
+          'UPDATE stock_actual SET stock = stock - ? WHERE id_productos = ?',
+          [cantidad, idProducto],
+        );
+      }
+
+      await connection.commit();
+      return {
+        message: 'Venta registrada con exito',
+        ticketId: String(idVenta),
+        total: dto.total,
+      };
+    } catch (error) {
+      if (connection) {
+        await connection.rollback();
+      }
+
+      if (error instanceof BadRequestException || error instanceof ConflictException) {
+        throw error;
+      }
+
+      throw new InternalServerErrorException({
+        error: 'Error Interno del Servidor',
+        message: 'Fallo al procesar la venta y actualizar el inventario.',
+      });
+    } finally {
+      if (connection) {
+        connection.release();
+      }
+    }
+  }
+}
