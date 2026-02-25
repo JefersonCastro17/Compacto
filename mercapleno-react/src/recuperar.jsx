@@ -4,6 +4,7 @@ import logo from "./logo.svg";
 
 import "./styles/base.css";
 import "./styles/registro.css";
+import { buildApiUrl } from "./services/apiConfig";
 
 function Recuperar() {
   const navigate = useNavigate();
@@ -33,7 +34,7 @@ function Recuperar() {
 
     try {
       // El payload sale del estado controlado (email).
-      const response = await fetch("http://localhost:4000/api/auth/request-password-reset", {
+      const response = await fetch(buildApiUrl("/auth/request-password-reset"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })
@@ -76,7 +77,7 @@ function Recuperar() {
 
     try {
       // El payload sale del estado controlado (email, code, newPassword).
-      const response = await fetch("http://localhost:4000/api/auth/reset-password", {
+      const response = await fetch(buildApiUrl("/auth/reset-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code, newPassword })
@@ -207,3 +208,4 @@ function Recuperar() {
 }
 
 export default Recuperar;
+

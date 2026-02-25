@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { Bar, Pie } from "react-chartjs-2";
 import { useNavigate } from "react-router-dom"; // ⚠️ Importar useNavigate
-import { useAuthContext } from "./context/AuthContext"; // ⚠️ IMPORTAR CONTEXTO
+import { useAuthContext } from "./context/AuthContext";
+import { buildApiUrl } from "./services/apiConfig";
 
 // Registrar componentes de Chart.js
 import {
@@ -50,7 +51,7 @@ export default function Estadisticas() {
 
     try {
       // ⚠️ Incluir el token en la petición
-      const res = await fetch("http://localhost:3000/estadisticas", {
+      const res = await fetch(buildApiUrl("/sales/reports/resumen"), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -88,3 +89,4 @@ export default function Estadisticas() {
     </div>
   );
 }
+

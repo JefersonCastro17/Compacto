@@ -50,7 +50,7 @@ function InventoryPage() {
                 
                 setCategories([{ value: 'todas', label: 'Todas las categorías' }, ...categoriesArray]);
             } catch (error) {
-                if (error.message === "UNAUTHORIZED_ACCESS") {
+                if (error.code === "UNAUTHORIZED_ACCESS" || error.status === 401 || error.status === 403) {
                     handleUnauthorizedAccess();
                     return; 
                 }
@@ -83,7 +83,7 @@ function InventoryPage() {
 
         } catch (error) {
             // MANEJO DE ERROR DE AUTENTICACIÓN
-            if (error.message === "UNAUTHORIZED_ACCESS") {
+            if (error.code === "UNAUTHORIZED_ACCESS" || error.status === 401 || error.status === 403) {
                 handleUnauthorizedAccess();
                 return;
             }

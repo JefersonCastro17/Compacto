@@ -9,6 +9,7 @@ import "./styles/base.css";
 import "./styles/login.css";
 import logo from "./logo.svg";
 import { useAuthContext } from "./context/AuthContext";
+import { buildApiUrl } from "./services/apiConfig";
 
 function Login() {
   const { login } = useAuthContext();
@@ -66,7 +67,7 @@ function Login() {
     }
 
     try {
-      const response = await fetch("http://localhost:4000/api/auth/login", {
+      const response = await fetch(buildApiUrl("/auth/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password })
@@ -200,3 +201,4 @@ function Login() {
 }
 
 export default Login;
+

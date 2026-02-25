@@ -1,88 +1,103 @@
-import React, { useEffect, useState, useCallback } from "react";
-import "../styles/usuarioC.css"; 
-import { useAuthContext } from '../context/AuthContext'; 
+import React, { useCallback, useEffect, useState } from 'react';
+import { useAuthContext } from '../context/AuthContext';
+import { buildApiUrl } from '../services/apiConfig';
+import '../styles/usuarioC.css';
+
+const USERS_API = buildApiUrl('/admin/users');
 
 export default function UsuarioC() {
-  const { token, logout } = useAuthContext(); 
-  
+  const { token, logout } = useAuthContext();
+
   const [usuarios, setUsuarios] = useState([]);
   const [mostrar, setMostrar] = useState(false);
   const [editId, setEditId] = useState(null);
-  const [busqueda, setBusqueda] = useState("");
+  const [busqueda, setBusqueda] = useState('');
   const [toast, setToast] = useState(null);
 
   const [form, setForm] = useState({
-    nombre: "",
-    apellido: "",
-    email: "",
-    password: "",
-    direccion: "",
-    fecha_nacimiento: "",
-    id_rol: "3", 
-    id_tipo_identificacion: "1",
-    numero_identificacion: ""
+    nombre: '',
+    apellido: '',
+    email: '',
+    password: '',
+    direccion: '',
+    fecha_nacimiento: '',
+    id_rol: '3',
+    id_tipo_identificacion: '1',
+    numero_identificacion: '',
   });
 
-  /* =======================
-     TOAST
-  ======================= */
-  const mostrarToast = (mensaje, tipo = "success") => {
+  const mostrarToast = (mensaje, tipo = 'success') => {
     setToast({ mensaje, tipo });
     setTimeout(() => setToast(null), 3000);
   };
 
-  // 🔑 CORRECCIÓN ESLINT: Se envuelve en useCallback y depende de token y logout
-  const getAuthHeaders = useCallback((extraHeaders = {}) => {
-      if (!token) {
-          console.error("Token no disponible. Se requiere autenticación.");
-      }
-      return {
-          ...extraHeaders,
-          'Authorization': `Bearer ${token}` 
-      };
-  }, [token]); // Solo necesita depender de 'token'
+  const getAuthHeaders = useCallback(
+    (extraHeaders = {}) => ({
+      ...extraHeaders,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    }),
+    [token],
+  );
 
-  /* =======================
-     CARGAR USUARIOS (USA TOKEN)
-  ======================= */
-  // 🔑 CORRECCIÓN ESLINT: Se incluye getAuthHeaders como dependencia
+  const parseBody = async (response) => {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return response.json();
+    }
+
+    const text = await response.text();
+    return text ? { message: text } : {};
+  };
+
+  const handleUnauthorized = useCallback(() => {
+    logout();
+    mostrarToast('Sesion expirada. Inicia sesion nuevamente.', 'error');
+    window.location.href = '/login';
+  }, [logout]);
+
   const cargar = useCallback(async () => {
     try {
-        const res = await fetch("http://localhost:4000/api/admin/users", {
-            headers: getAuthHeaders()
-        });
+      const res = await fetch(USERS_API, {
+        headers: getAuthHeaders(),
+      });
 
-        if (res.status === 401 || res.status === 403) {
-            logout(); // Forzar logout si el token es inválido/expirado
-            mostrarToast("⚠️ Sesión expirada. Por favor, inicie sesión de nuevo.", "error");
-            return;
-        }
-        
-        const data = await res.json();
-        setUsuarios(data.usuarios || []);
-    } catch (error) {
-        console.error("Error al cargar usuarios:", error);
-        mostrarToast("❌ Error de conexión con el servidor.", "error");
+      if (res.status === 401 || res.status === 403) {
+        handleUnauthorized();
+        return;
+      }
+
+      const data = await parseBody(res);
+      setUsuarios(data.usuarios || []);
+    } catch (_error) {
+      mostrarToast('Error de conexion con el servidor.', 'error');
     }
-  }, [getAuthHeaders, logout]); // Depende del memoizado getAuthHeaders y logout
+  }, [getAuthHeaders, handleUnauthorized]);
 
-  // 🟢 CORRECCIÓN ESLINT: Se incluye 'cargar' como dependencia
   useEffect(() => {
-    cargar();
-  }, [cargar]); 
+    if (token) {
+      cargar();
+    }
+  }, [token, cargar]);
 
-  /* =======================
-     GUARDAR (CREATE / UPDATE) (USA TOKEN)
-  ======================= */
+  const limpiar = () => {
+    setForm({
+      nombre: '',
+      apellido: '',
+      email: '',
+      password: '',
+      direccion: '',
+      fecha_nacimiento: '',
+      id_rol: '3',
+      id_tipo_identificacion: '1',
+      numero_identificacion: '',
+    });
+  };
+
   const guardar = async () => {
-    const url = editId
-      ? `http://localhost:4000/api/admin/users/${editId}`
-      : "http://localhost:4000/api/admin/users";
-
-    const method = editId ? "PUT" : "POST";
+    const url = editId ? `${USERS_API}/${editId}` : USERS_API;
+    const method = editId ? 'PATCH' : 'POST';
 
     const payload = { ...form };
-
     if (editId && !payload.password) {
       delete payload.password;
     }
@@ -90,128 +105,99 @@ export default function UsuarioC() {
     try {
       const res = await fetch(url, {
         method,
-        headers: getAuthHeaders({ "Content-Type": "application/json" }), 
-        body: JSON.stringify(payload)
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(payload),
       });
-      
+
       if (res.status === 401 || res.status === 403) {
-          logout();
-          mostrarToast("⚠️ Sesión expirada. Inicie sesión de nuevo.", "error");
-          return;
-      }
-
-      const data = await res.json();
-
-      if (!data.success) {
-        mostrarToast("❌ Error al guardar usuario", "error");
+        handleUnauthorized();
         return;
       }
 
-      mostrarToast(editId ? "✏ Usuario actualizado" : "✅ Usuario creado");
+      const data = await parseBody(res);
+      if (!res.ok || !data.success) {
+        mostrarToast(data.message || 'Error al guardar usuario', 'error');
+        return;
+      }
+
+      mostrarToast(editId ? 'Usuario actualizado' : 'Usuario creado');
       setMostrar(false);
       setEditId(null);
       limpiar();
       cargar();
-    } catch (err) {
-      mostrarToast("❌ Error de conexión", "error");
+    } catch (_err) {
+      mostrarToast('Error de conexion', 'error');
     }
   };
 
-  /* =======================
-     LIMPIAR FORM
-  ======================= */
-  const limpiar = () => {
-    setForm({
-      nombre: "",
-      apellido: "",
-      email: "",
-      password: "",
-      direccion: "",
-      fecha_nacimiento: "",
-      id_rol: "3", // Cliente
-      id_tipo_identificacion: "1",
-      numero_identificacion: ""
-    });
-  };
-
-  /* =======================
-     EDITAR
-  ======================= */
   const editar = (u) => {
     setEditId(u.id);
     setForm({
-      nombre: u.nombre,
-      apellido: u.apellido,
-      email: u.email,
-      password: "",
-      direccion: u.direccion,
-      fecha_nacimiento: u.fecha_nacimiento?.split("T")[0] || "",
+      nombre: u.nombre || '',
+      apellido: u.apellido || '',
+      email: u.email || '',
+      password: '',
+      direccion: u.direccion || '',
+      fecha_nacimiento: u.fecha_nacimiento ? String(u.fecha_nacimiento).split('T')[0] : '',
       id_rol: String(u.id_rol),
       id_tipo_identificacion: String(u.id_tipo_identificacion),
-      numero_identificacion: u.numero_identificacion
+      numero_identificacion: u.numero_identificacion || '',
     });
     setMostrar(true);
   };
 
-  /* =======================
-     ELIMINAR (USA TOKEN)
-  ======================= */
   const eliminar = async (id) => {
-    if (!window.confirm("¿Eliminar usuario?")) return;
+    if (!window.confirm('Eliminar usuario?')) return;
 
     try {
-        const res = await fetch(`http://localhost:4000/api/admin/users/${id}`, {
-            method: "DELETE",
-            headers: getAuthHeaders()
-        });
+      const res = await fetch(`${USERS_API}/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
 
-        if (res.status === 401 || res.status === 403) {
-            logout();
-            mostrarToast("⚠️ Sesión expirada. Inicie sesión de nuevo.", "error");
-            return;
-        }
+      if (res.status === 401 || res.status === 403) {
+        handleUnauthorized();
+        return;
+      }
 
-        mostrarToast("🗑 Usuario eliminado");
-        cargar();
-    } catch (error) {
-        mostrarToast("❌ Error al eliminar.", "error");
+      const data = await parseBody(res);
+      if (!res.ok) {
+        mostrarToast(data.message || 'Error al eliminar.', 'error');
+        return;
+      }
+
+      mostrarToast('Usuario eliminado');
+      cargar();
+    } catch (_error) {
+      mostrarToast('Error al eliminar.', 'error');
     }
   };
 
-  /* =======================
-     BADGE ROL
-  ======================= */
   const rolBadge = (rol) => {
-    if (rol === 1) return <span className="badge admin">Admin</span>; 
-    if (rol === 2) return <span className="badge empleado">Empleado</span>; 
+    if (rol === 1) return <span className="badge admin">Admin</span>;
+    if (rol === 2) return <span className="badge empleado">Empleado</span>;
     return <span className="badge cliente">Cliente</span>;
   };
 
-  /* =======================
-     FILTRO
-  ======================= */
-  const usuariosFiltrados = usuarios.filter(u =>
-    `${u.nombre} ${u.apellido} ${u.email}`
-      .toLowerCase()
-      .includes(busqueda.toLowerCase())
+  const usuariosFiltrados = usuarios.filter((u) =>
+    `${u.nombre} ${u.apellido} ${u.email}`.toLowerCase().includes(busqueda.toLowerCase()),
   );
 
   return (
     <div className="container">
-
       {toast && <div className={`toast ${toast.tipo}`}>{toast.mensaje}</div>}
 
       <div className="main">
         <div className="controles">
           <button className="btn-crear" onClick={() => setMostrar(true)}>
-            ➕ Nuevo Usuario
+            Nuevo Usuario
           </button>
 
           <input
             className="input-busqueda"
             placeholder="Buscar por nombre o email..."
             value={busqueda}
-            onChange={e => setBusqueda(e.target.value)}
+            onChange={(e) => setBusqueda(e.target.value)}
           />
         </div>
 
@@ -224,20 +210,24 @@ export default function UsuarioC() {
                 <th>Email</th>
                 <th>Rol</th>
                 <th>Tipo Doc</th>
-                <th>N° Documento</th>
+                <th>N Documento</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {usuariosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="td-empty">Sin usuarios</td>
+                  <td colSpan="7" className="td-empty">
+                    Sin usuarios
+                  </td>
                 </tr>
               ) : (
-                usuariosFiltrados.map(u => (
+                usuariosFiltrados.map((u) => (
                   <tr key={u.id}>
                     <td>{u.id}</td>
-                    <td>{u.nombre} {u.apellido}</td>
+                    <td>
+                      {u.nombre} {u.apellido}
+                    </td>
                     <td>{u.email}</td>
                     <td>{rolBadge(u.id_rol)}</td>
                     <td>{u.id_tipo_identificacion}</td>
@@ -258,39 +248,46 @@ export default function UsuarioC() {
         </div>
       </div>
 
-      {/* =======================
-           MODAL
-      ======================= */}
       {mostrar && (
         <div className="modal-overlay">
           <div className="modal-content">
-
             <div className="modal-header">
-              <h2>{editId ? "Editar Usuario" : "Nuevo Usuario"}</h2>
-              <button className="modal-close" onClick={() => setMostrar(false)}>×</button>
+              <h2>{editId ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
+              <button className="modal-close" onClick={() => setMostrar(false)}>
+                X
+              </button>
             </div>
 
             <div className="modal-body">
-
-              {["nombre", "apellido", "email", "direccion", "numero_identificacion"].map(campo => (
+              {['nombre', 'apellido', 'email', 'direccion', 'numero_identificacion'].map((campo) => (
                 <div className="form-group" key={campo}>
-                  <label>{campo.replace("_", " ")}</label>
+                  <label>{campo.replace('_', ' ')}</label>
                   <input
                     className="input"
                     value={form[campo]}
-                    onChange={e => setForm({ ...form, [campo]: e.target.value })}
+                    onChange={(e) => setForm({ ...form, [campo]: e.target.value })}
                   />
                 </div>
               ))}
 
               <div className="form-group">
-                <label>Tipo de Identificación</label>
+                <label>Fecha de Nacimiento</label>
+                <input
+                  type="date"
+                  className="input"
+                  value={form.fecha_nacimiento}
+                  onChange={(e) => setForm({ ...form, fecha_nacimiento: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Tipo de Identificacion</label>
                 <select
                   className="input"
                   value={form.id_tipo_identificacion}
-                  onChange={e => setForm({ ...form, id_tipo_identificacion: e.target.value })}
+                  onChange={(e) => setForm({ ...form, id_tipo_identificacion: e.target.value })}
                 >
-                  <option value="1">Cédula</option>
+                  <option value="1">Cedula</option>
                   <option value="2">Pasaporte</option>
                   <option value="3">Otro</option>
                 </select>
@@ -301,7 +298,7 @@ export default function UsuarioC() {
                 <select
                   className="input"
                   value={form.id_rol}
-                  onChange={e => setForm({ ...form, id_rol: e.target.value })}
+                  onChange={(e) => setForm({ ...form, id_rol: e.target.value })}
                 >
                   <option value="1">Administrador</option>
                   <option value="2">Empleado</option>
@@ -311,23 +308,25 @@ export default function UsuarioC() {
 
               {!editId && (
                 <div className="form-group">
-                  <label>Contraseña</label>
+                  <label>Contrasena</label>
                   <input
                     type="password"
                     className="input"
                     value={form.password}
-                    onChange={e => setForm({ ...form, password: e.target.value })}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
                   />
                 </div>
               )}
-
             </div>
 
             <div className="modal-footer">
-              <button className="btn-guardar" onClick={guardar}>Guardar</button>
-              <button className="btn-cancelar" onClick={() => setMostrar(false)}>Cancelar</button>
+              <button className="btn-guardar" onClick={guardar}>
+                Guardar
+              </button>
+              <button className="btn-cancelar" onClick={() => setMostrar(false)}>
+                Cancelar
+              </button>
             </div>
-
           </div>
         </div>
       )}

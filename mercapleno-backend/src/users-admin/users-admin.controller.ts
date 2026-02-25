@@ -1,4 +1,4 @@
-﻿import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateUserAdminDto } from './dto/create-user-admin.dto';
 import { UpdateUserAdminDto } from './dto/update-user-admin.dto';
@@ -25,6 +25,12 @@ export class UsersAdminController {
   @Patch(':id')
   @ApiOperation({ summary: 'Actualizar usuario' })
   update(@Param('id') id: string, @Body() dto: UpdateUserAdminDto) {
+    return this.usersAdminService.update(id, dto);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Actualizar usuario (compatibilidad PUT)' })
+  updatePut(@Param('id') id: string, @Body() dto: UpdateUserAdminDto) {
     return this.usersAdminService.update(id, dto);
   }
 

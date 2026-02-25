@@ -1,6 +1,6 @@
-﻿import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { ArrayMinSize, IsArray, IsInt, IsNumber, IsOptional, ValidateNested } from 'class-validator';
+import { ArrayMinSize, IsArray, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { OrderItemDto } from './order-item.dto';
 
 export class CreateOrderDto {
@@ -15,13 +15,13 @@ export class CreateOrderDto {
   @IsNumber()
   total: number;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Metodo de pago, por ejemplo M1, M2' })
   @IsOptional()
-  @IsInt()
-  id_metodo?: number;
+  @IsString()
+  id_metodo?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ description: 'Alias legacy de id_metodo' })
   @IsOptional()
-  @IsInt()
-  metodo_pago?: number;
+  @IsString()
+  metodo_pago?: string;
 }

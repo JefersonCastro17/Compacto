@@ -15,6 +15,31 @@ const MOVIMIENTO_VENTA_ID = 2;
 export class SalesService {
   constructor(private readonly db: MysqlService) {}
 
+  private resolvePaymentMethod(value: unknown): string | null {
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+      return `M${Math.trunc(value)}`;
+    }
+
+    if (typeof value !== 'string') {
+      return null;
+    }
+
+    const normalized = value.trim().toUpperCase();
+    if (!normalized) {
+      return null;
+    }
+
+    if (/^M\d+$/.test(normalized)) {
+      return normalized;
+    }
+
+    if (/^\d+$/.test(normalized)) {
+      return `M${normalized}`;
+    }
+
+    return normalized;
+  }
+
   async getFilteredProducts(filters: {
     search?: string;
     category?: string;
@@ -97,7 +122,7 @@ export class SalesService {
   }
 
   async createOrder(dto: CreateOrderDto, userId?: number) {
-    const idMetodo = dto.id_metodo ?? dto.metodo_pago;
+    const idMetodo = this.resolvePaymentMethod(dto.id_metodo ?? dto.metodo_pago);
     if (!idMetodo) {
       throw new BadRequestException({ error: 'Datos de orden incompletos o invalidos.' });
     }
@@ -108,6 +133,18 @@ export class SalesService {
     try {
       connection = await this.db.getConnection();
       await connection.beginTransaction();
+
+      const [[metodo]] = await connection.query<any[]>(
+        'SELECT id_metodo FROM metodo WHERE id_metodo = ? LIMIT 1',
+        [idMetodo],
+      );
+
+      if (!metodo) {
+        throw new BadRequestException({
+          error: 'Metodo de pago invalido',
+          message: `No existe el metodo de pago ${idMetodo}.`,
+        });
+      }
 
       const [ventaResult] = await connection.query<any>(
         `

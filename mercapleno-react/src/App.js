@@ -1,7 +1,7 @@
 // 🟢 src/App.js (VERSION FINAL Y CORREGIDA con RegistroMovimientos)
 
 import React from 'react';
-import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 // Importación de Contextos y Componentes
 import { CartProvider } from './context/CartContext'; 
 import { useAuthContext } from './context/AuthContext'; 
@@ -47,7 +47,6 @@ function RoleRoute({ requiredRoles, element }) {
 
 function App() {
 	const { user, isAuthenticated } = useAuthContext();
-	const navigate = useNavigate();
 
 	// Determina la ruta de inicio tras el login si no se especifica una
     const getHomeRoute = () => {

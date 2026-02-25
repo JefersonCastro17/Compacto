@@ -1,0 +1,372 @@
+MERCAPLENO FRONTEND - GUIA COMPLETA DE CARPETAS, ARCHIVOS Y BLOQUES
+===================================================================
+
+Fecha: 2026-02-25
+Proyecto frontend: mercapleno-react
+Proyecto backend relacionado: mercapleno-backend
+
+
+0) RESPUESTA DIRECTA A TU DUDA
+------------------------------
+Si, correcto:
+- El FRONTEND consume la API (hace fetch/HTTP).
+- El BACKEND recibe esas llamadas en controllers y ejecuta la logica en services.
+
+Flujo tecnico:
+Front (fetch) -> URL /api/... -> Controller (Nest) -> Service -> DB (Prisma/MySQL) -> Response -> Front.
+
+
+1) DONDE QUEDO EL CONSUMO DE API EN FRONTEND
+---------------------------------------------
+Archivos FRONT que consumen API:
+
+A) Auth
+- src/Login.jsx
+  consume: POST /api/auth/login
+- src/registro.jsx
+  consume: POST /api/auth/register
+- src/verificar.jsx
+  consume: POST /api/auth/verify-email
+  consume: POST /api/auth/resend-verification
+- src/recuperar.jsx
+  consume: POST /api/auth/request-password-reset
+  consume: POST /api/auth/reset-password
+
+B) Catalogo y ventas
+- src/services/productData.js
+  consume: GET /api/sales/products
+  consume: GET /api/sales/categories
+  consume: POST /api/sales/orders
+- src/pages/InventoryPage.jsx
+  usa getProducts/getCategories desde productData.js
+- src/hooks/useCart.js
+  usa sendOrder() desde productData.js
+
+C) Inventario
+- src/services/inventarioService.js
+  consume: GET /api/movimientos/productos
+  consume: POST /api/movimientos/registrar
+- src/pages/RegistroMovimientos.jsx
+  usa getInventoryProducts/registerInventoryMovement
+
+D) Usuarios admin
+- src/pages/usuarioC.jsx
+  consume: GET /api/admin/users
+  consume: POST /api/admin/users
+  consume: PATCH /api/admin/users/:id
+  consume: DELETE /api/admin/users/:id
+
+E) Productos admin
+- src/pages/Lista_productos.jsx
+  consume: GET /api/productos
+  consume: POST /api/productos
+  consume: PUT /api/productos/:id
+  consume: DELETE /api/productos/:id
+
+F) Reportes
+- src/services/reportesService.js
+  consume: GET /api/sales/reports/ventas-mes
+  consume: GET /api/sales/reports/top-productos
+  consume: GET /api/sales/reports/resumen
+  consume: GET /api/sales/reports/resumen-mes
+  consume: GET /api/sales/reports/pdf-resumen
+- src/pages/Estadisticas.jsx
+  usa esas funciones de reportesService.js
+
+G) Config central de URL
+- src/services/apiConfig.js
+  define base URL:
+  REACT_APP_API_BASE_URL o por default http://localhost:4000/api
+
+
+2) EN QUE ARCHIVOS DEL BACKEND SE ATIENDEN ESAS LLAMADAS
+---------------------------------------------------------
+Auth:
+- src/auth/auth.controller.ts
+- src/auth/auth.service.ts
+
+Admin users:
+- src/users-admin/users-admin.controller.ts
+- src/users-admin/users-admin.service.ts
+
+Productos:
+- src/products/products.controller.ts
+- src/products/products.service.ts
+
+Movimientos:
+- src/inventory/inventory.controller.ts
+- src/inventory/inventory.service.ts
+
+Ventas:
+- src/sales/sales.controller.ts
+- src/sales/sales.service.ts
+
+Reportes:
+- src/reports/reports.controller.ts
+- src/reports/reports.service.ts
+
+
+3) ESTRUCTURA FRONTEND (CARPETA POR CARPETA)
+---------------------------------------------
+
+3.1) public/
+------------
+- index.html: plantilla HTML principal.
+- manifest.json, robots.txt, iconos: metadata web.
+- images/: imagenes publicas estaticas.
+  - images/placeholder.svg: fallback de imagen.
+  - images/productos/ariel.jpg: ejemplo local.
+
+3.2) src/
+----------
+- index.js: punto de entrada React, monta BrowserRouter + AuthProvider + App.
+- App.js: define rutas y control por rol.
+- logo.svg, index.css, login.css, registro.css: recursos UI.
+- reportWebVitals.js: medicion de performance (opcional).
+- setupTests.js, App.test.js: pruebas basicas (template CRA).
+- supabaseClient.js: cliente Supabase (actualmente no participa en el flujo principal).
+
+Subcarpetas:
+- components/: piezas UI reutilizables.
+- context/: estado global (auth y carrito).
+- hooks/: logica reutilizable de carrito.
+- pages/: pantallas completas.
+- services/: capa de acceso a API y utilidades.
+- styles/: hojas de estilo por modulo/pantalla.
+
+
+4) ARCHIVO POR ARCHIVO (FRONTEND)
+----------------------------------
+
+4.1) CORE
+----------
+- src/index.js
+  Bloques:
+  1. createRoot.
+  2. BrowserRouter.
+  3. AuthProvider.
+  4. App.
+
+- src/App.js
+  Bloques:
+  1. RoleRoute: protege rutas por id_rol.
+  2. getHomeRoute: redireccion segun rol.
+  3. rutas publicas: login/registro/verificar/recuperar.
+  4. rutas privadas: catalogo, cart, ticket, usuarioC, admin/users, products/*, estadisticas.
+
+
+4.2) AUTH UI
+------------
+- src/Login.jsx
+  Bloques:
+  1. formulario controlado (email/password).
+  2. POST /auth/login.
+  3. manejo EMAIL_NOT_VERIFIED -> redirige a /verificar.
+  4. login() guarda token+user en AuthContext.
+
+- src/registro.jsx
+  Bloques:
+  1. formulario registro.
+  2. validaciones basicas (campos, edad).
+  3. POST /auth/register.
+  4. redireccion a /verificar con email.
+
+- src/verificar.jsx
+  Bloques:
+  1. POST /auth/verify-email.
+  2. POST /auth/resend-verification.
+
+- src/recuperar.jsx
+  Bloques:
+  1. paso request code -> POST /auth/request-password-reset.
+  2. paso reset -> POST /auth/reset-password.
+
+
+4.3) CONTEXT Y HOOKS
+--------------------
+- src/context/AuthContext.jsx
+  Bloques:
+  1. estado inicial desde localStorage.
+  2. login(user, token).
+  3. logout().
+  4. helpers getUserId/getUserName/getUserEmail.
+
+- src/context/CartContext.jsx
+  Funcion: provider del hook useCart.
+
+- src/hooks/useCart.js
+  Bloques:
+  1. persistencia carrito en localStorage.
+  2. add/remove/set quantity.
+  3. calculo totales.
+  4. processCheckout(id_metodo) -> sendOrder().
+
+
+4.4) SERVICES (CAPA API)
+-------------------------
+- src/services/apiConfig.js
+  Funcion: buildApiUrl(path) centraliza base URL.
+
+- src/services/productData.js
+  Bloques:
+  1. authorizedFetch() (envia Bearer token cuando existe).
+  2. getProducts() filtros de catalogo.
+  3. getCategories().
+  4. sendOrder().
+
+- src/services/inventarioService.js
+  Bloques:
+  1. getInventoryProducts(token).
+  2. registerInventoryMovement(token, movementData).
+  3. manejo de errores 401/403 -> code UNAUTHORIZED_ACCESS.
+
+- src/services/reportesService.js
+  Bloques:
+  1. getVentasMes/getTopProductos/getResumen/getResumenMes.
+  2. getPDFUrl().
+  3. fetchReportPdf() con token.
+
+- src/services/imageUtils.js
+  Funcion: resolver rutas de imagen y fallback seguro.
+
+
+4.5) PAGINAS
+------------
+- src/pages/AdminDashboard.jsx
+  Funcion:
+  - panel para roles 1 y 2
+  - botones de navegacion por modulo
+
+- src/pages/InventoryPage.jsx
+  Funcion:
+  - catalogo para venta
+  Bloques:
+  1. carga categorias via API.
+  2. carga productos filtrados via API.
+  3. maneja 401/403 redirigiendo a login.
+
+- src/pages/CartPage.jsx
+  Funcion:
+  - resumen carrito y checkout
+  Bloques:
+  1. seleccion metodo de pago (M1..M6).
+  2. processCheckout() via useCart.
+  3. guarda ticket y redirige a /ticket.
+
+- src/pages/TicketPage.jsx
+  Funcion:
+  - mostrar recibo de compra desde localStorage.
+
+- src/pages/Estadisticas.jsx
+  Funcion:
+  - panel reportes con charts y PDF.
+  Bloques:
+  1. carga concurrente de reportes.
+  2. calcula KPIs derivados.
+  3. descarga/imprime PDF.
+
+- src/pages/usuarioC.jsx
+  Funcion:
+  - CRUD usuarios admin.
+  Bloques:
+  1. GET lista.
+  2. POST crear.
+  3. PATCH actualizar.
+  4. DELETE eliminar.
+  5. manejo de sesion expirada.
+
+- src/pages/Lista_productos.jsx
+  Funcion:
+  - CRUD productos admin.
+  Bloques:
+  1. GET productos.
+  2. POST crear.
+  3. PUT actualizar.
+  4. DELETE eliminar.
+  5. usa token en headers.
+
+- src/pages/RegistroMovimientos.jsx
+  Funcion:
+  - modulo entradas/salidas inventario.
+  Bloques:
+  1. GET productos con stock.
+  2. modal para registrar movimiento.
+  3. POST movimiento (entrada/salida).
+
+
+4.6) COMPONENTES UI/FEATURES
+-----------------------------
+- src/components/ui/Header.jsx
+  barra superior y logout.
+- src/components/ui/ProductCard.jsx
+  card producto + boton agregar carrito.
+- src/components/ui/CartItem.jsx
+  item carrito con +/- y eliminar.
+- src/components/features/FilterBar.jsx
+  filtros catalogo (nombre/categoria/precios).
+- src/components/features/TotalsSummary.jsx
+  resumen total del carrito.
+
+
+4.7) ARCHIVOS DE ESTILOS
+------------------------
+- src/styles/base.css: base global.
+- src/styles/inventory.css: catalogo.
+- src/styles/cart.css: carrito.
+- src/styles/ticket.css: ticket.
+- src/styles/estadisticas.css: reportes.
+- src/styles/usuarioC.css: usuarios admin.
+- src/styles/Lista_productos.css: productos admin + movimientos.
+- src/styles/login.css, src/styles/registro.css: auth pages.
+- src/styles/crudU.css: estilos auxiliares CRUD.
+
+
+4.8) ARCHIVOS LEGACY/SECUNDARIOS
+---------------------------------
+- src/estadisticas.jsx
+  archivo legado no usado por App.js (la ruta activa usa src/pages/Estadisticas.jsx).
+- src/supabaseClient.js
+  no participa en el flujo API principal actual.
+- src/App.test.js
+  test default de CRA (puede quedar desactualizado).
+
+
+5) MAPA FRONT -> API -> BACK (RESUMEN)
+---------------------------------------
+1. Login.jsx -> POST /auth/login -> auth.controller.ts -> auth.service.ts
+2. registro.jsx -> POST /auth/register -> auth.controller.ts -> auth.service.ts
+3. verificar.jsx -> /auth/verify-email, /auth/resend-verification -> auth.controller.ts
+4. recuperar.jsx -> /auth/request-password-reset, /auth/reset-password -> auth.controller.ts
+5. InventoryPage + productData -> /sales/products, /sales/categories -> sales.controller.ts
+6. useCart + productData -> POST /sales/orders -> sales.controller.ts -> sales.service.ts
+7. RegistroMovimientos + inventarioService -> /movimientos/* -> inventory.controller.ts
+8. usuarioC.jsx -> /admin/users* -> users-admin.controller.ts
+9. Lista_productos.jsx -> /productos* -> products.controller.ts
+10. Estadisticas + reportesService -> /sales/reports/* -> reports.controller.ts
+
+
+6) COMO QUEDA FUNCIONANDO DESPUES DE LOS ARREGLOS
+--------------------------------------------------
+- URL base centralizada en apiConfig.js.
+- Sin hardcode disperso de puertos/rutas.
+- Front envia token Bearer en modulos protegidos.
+- Metodo de actualizacion usuarios alineado (PATCH en front, backend compatible con PATCH y PUT).
+- Metodo de pago de ventas alineado con backend (M1, M2, etc.).
+- Inventario separado en servicio dedicado correcto.
+
+
+7) COMANDOS PARA EJECUTAR
+--------------------------
+Frontend:
+- npm install
+- npm run start
+- npm run build
+
+Backend (en carpeta backend):
+- npm run start:dev
+
+Requisito:
+- MySQL arriba para endpoints con DB.
+
+
+Fin.

@@ -4,6 +4,7 @@ import logo from "./logo.svg";
 
 import "./styles/base.css";
 import "./styles/registro.css";
+import { buildApiUrl } from "./services/apiConfig";
 
 function Verificar() {
   const [searchParams] = useSearchParams();
@@ -29,7 +30,7 @@ function Verificar() {
     setMessageType("");
 
     try {
-      const response = await fetch("http://localhost:4000/api/auth/verify-email", {
+      const response = await fetch(buildApiUrl("/auth/verify-email"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, code })
@@ -68,7 +69,7 @@ function Verificar() {
     setMessageType("");
 
     try {
-      const response = await fetch("http://localhost:4000/api/auth/resend-verification", {
+      const response = await fetch(buildApiUrl("/auth/resend-verification"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email })
@@ -160,3 +161,4 @@ function Verificar() {
 }
 
 export default Verificar;
+

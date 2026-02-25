@@ -4,6 +4,7 @@ import logo from "./logo.svg";
 
 import "./styles/base.css";
 import "./styles/registro.css";
+import { buildApiUrl } from "./services/apiConfig";
 
 function Registro() {
   const navigate = useNavigate();
@@ -81,7 +82,7 @@ function Registro() {
     }
 
     try {
-      const response = await fetch("http://localhost:4000/api/auth/register", {
+      const response = await fetch(buildApiUrl("/auth/register"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -249,3 +250,4 @@ function Registro() {
 }
 
 export default Registro;
+
