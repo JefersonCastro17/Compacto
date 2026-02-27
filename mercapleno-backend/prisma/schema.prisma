@@ -212,4 +212,6 @@ model venta_productos {
 enum productos_estado {
   Disponible
   Agotado
+  Descontinuado    // agregado para reflejar producto fuera de circulación
+  En_transito      // valor mapeado por mapEstado en el servicio
 }

@@ -1,8 +1,15 @@
 ﻿import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { CreateUserAdminDto } from './dto/create-user-admin.dto';
 import { UpdateUserAdminDto } from './dto/update-user-admin.dto';
+
+// type helper for queries that include relations
+type UserWithRelations = Prisma.usuariosGetPayload<{
+  include: { roles: true; tipos_identificacion: true };
+}>;
+
 
 @Injectable()
 export class UsersAdminService {
@@ -21,7 +28,7 @@ export class UsersAdminService {
 
     return {
       success: true,
-      usuarios: usuarios.map((user) => ({
+      usuarios: usuarios.map((user: UserWithRelations) => ({
         id: user.id,
         nombre: user.nombre,
         apellido: user.apellido,
