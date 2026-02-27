@@ -212,6 +212,4 @@ model venta_productos {
 enum productos_estado {
   Disponible
   Agotado
-  En_transito   @map("En tránsito")
-  Descontinuado
 }
