@@ -1,6 +1,7 @@
-﻿import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PoolConnection } from 'mysql2/promise';
 import { MysqlService } from '../common/database/mysql.service';
+import { buildLowStockAlert, getLowStockMetadata, LowStockAlert } from '../common/stock/low-stock.util';
 import { RegisterMovementDto } from './dto/register-movement.dto';
 
 @Injectable()
@@ -17,8 +18,16 @@ export class InventoryService {
       ORDER BY p.nombre ASC
     `;
 
-    const [rows] = await this.db.query(sql);
-    return rows;
+    const [rows] = await this.db.query<any[]>(sql);
+    return rows.map((row: any) => {
+      const stock = Number(row.stock || 0);
+
+      return {
+        ...row,
+        stock,
+        ...getLowStockMetadata(stock),
+      };
+    });
   }
 
   async registerMovement(dto: RegisterMovementDto, userId?: number) {
@@ -26,6 +35,7 @@ export class InventoryService {
     const id_usuario = Number.isFinite(Number(userId)) ? Number(userId) : 1;
 
     let connection: PoolConnection | null = null;
+    let lowStockAlert: LowStockAlert | null = null;
 
     try {
       connection = await this.db.getConnection();
@@ -70,8 +80,16 @@ export class InventoryService {
         );
       }
 
+      const stockSnapshot = await this.getStockSnapshot(connection, dto.id_producto);
+      if (stockSnapshot) {
+        lowStockAlert = buildLowStockAlert(stockSnapshot.id, stockSnapshot.stock, stockSnapshot.nombre);
+      }
+
       await connection.commit();
-      return { message: 'Movimiento registrado con exito' };
+      return {
+        message: 'Movimiento registrado con exito',
+        ...(lowStockAlert ? { warning: lowStockAlert } : {}),
+      };
     } catch (error) {
       if (connection) {
         await connection.rollback();
@@ -87,5 +105,29 @@ export class InventoryService {
         connection.release();
       }
     }
+  }
+
+  private async getStockSnapshot(connection: PoolConnection, productId: number) {
+    const [rows] = await connection.query<any[]>(
+      `
+        SELECT p.id_productos AS id, p.nombre, COALESCE(sa.stock, 0) AS stock
+        FROM productos p
+        LEFT JOIN stock_actual sa ON p.id_productos = sa.id_productos
+        WHERE p.id_productos = ?
+        LIMIT 1
+      `,
+      [productId],
+    );
+
+    const row = rows[0];
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: Number(row.id),
+      nombre: row.nombre ? String(row.nombre) : undefined,
+      stock: Number(row.stock || 0),
+    };
   }
 }

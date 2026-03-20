@@ -1,10 +1,14 @@
 ﻿import { Controller, Get, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiSecurity, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ReportsService } from './reports.service';
+import { Roles } from '../auth/decorators/roles.decorator';
 
+
+@Roles(1, 2)
 @ApiTags('Reportes')
 @ApiBearerAuth()
+@ApiSecurity('x-api-key')
 @Controller('sales/reports')
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}

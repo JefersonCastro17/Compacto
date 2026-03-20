@@ -3,7 +3,9 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductsService } from './products.service';
+import { Roles } from '../auth/decorators/roles.decorator';
 
+@Roles(1) 
 @ApiTags('Productos')
 @ApiBearerAuth()
 @Controller('productos')

@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -6,6 +6,7 @@
 } from '@nestjs/common';
 import { PoolConnection } from 'mysql2/promise';
 import { MysqlService } from '../common/database/mysql.service';
+import { buildLowStockAlert, getLowStockMetadata, LowStockAlert } from '../common/stock/low-stock.util';
 import { CreateOrderDto } from './dto/create-order.dto';
 
 const DOCUMENTO_VENTA_ID = 'CC';
@@ -89,15 +90,20 @@ export class SalesService {
     sql += ' ORDER BY p.nombre ASC';
 
     const [rows] = await this.db.query<any>(sql, params);
-    return rows.map((row: any) => ({
-      id: String(row.id),
-      nombre: row.nombre,
-      descripcion: row.descripcion || '',
-      price: Number(row.precio),
-      category: (row.category || 'otros').toLowerCase(),
-      image: row.image,
-      stock: Number(row.stock || 0),
-    }));
+    return rows.map((row: any) => {
+      const stock = Number(row.stock || 0);
+
+      return {
+        id: String(row.id),
+        nombre: row.nombre,
+        descripcion: row.descripcion || '',
+        price: Number(row.precio),
+        category: (row.category || 'otros').toLowerCase(),
+        image: row.image,
+        stock,
+        ...getLowStockMetadata(stock),
+      };
+    });
   }
 
   async getAvailableCategories() {
@@ -130,6 +136,8 @@ export class SalesService {
     const idUsuario = Number.isFinite(Number(userId)) ? Number(userId) : 1;
 
     let connection: PoolConnection | null = null;
+    const lowStockAlerts = new Map<number, LowStockAlert>();
+
     try {
       connection = await this.db.getConnection();
       await connection.beginTransaction();
@@ -165,7 +173,7 @@ export class SalesService {
 
         const [[producto]] = await connection.query<any[]>(
           `
-            SELECT p.precio, sa.stock
+            SELECT p.nombre, p.precio, sa.stock
             FROM productos p
             JOIN stock_actual sa ON p.id_productos = sa.id_productos
             WHERE p.id_productos = ?
@@ -201,6 +209,12 @@ export class SalesService {
           'UPDATE stock_actual SET stock = stock - ? WHERE id_productos = ?',
           [cantidad, idProducto],
         );
+
+        const remainingStock = Number(producto.stock) - cantidad;
+        const lowStockAlert = buildLowStockAlert(idProducto, remainingStock, producto.nombre);
+        if (lowStockAlert) {
+          lowStockAlerts.set(idProducto, lowStockAlert);
+        }
       }
 
       await connection.commit();
@@ -208,6 +222,7 @@ export class SalesService {
         message: 'Venta registrada con exito',
         ticketId: String(idVenta),
         total: dto.total,
+        ...(lowStockAlerts.size > 0 ? { warnings: Array.from(lowStockAlerts.values()) } : {}),
       };
     } catch (error) {
       if (connection) {

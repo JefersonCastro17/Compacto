@@ -1,4 +1,4 @@
-﻿import { Injectable, NotFoundException } from '@nestjs/common';
+﻿import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { productos_estado } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -78,11 +78,10 @@ export class ProductsService {
 
   private mapEstado(estado: string): productos_estado {
     const normalized = estado.trim().toLowerCase();
+
     if (normalized === 'disponible') return productos_estado.Disponible;
     if (normalized === 'agotado') return productos_estado.Agotado;
-    if (normalized === 'descontinuado') return productos_estado.Descontinuado;
 
-    // La base tiene valor mapeado para "En tránsito".
-    return productos_estado.En_transito;
+    throw new BadRequestException('Estado de producto invalido');
   }
 }

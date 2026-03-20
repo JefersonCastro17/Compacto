@@ -4,7 +4,9 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { RegisterMovementDto } from './dto/register-movement.dto';
 import { InventoryService } from './inventory.service';
+import { Roles } from '../auth/decorators/roles.decorator';
 
+@Roles(1, 2)
 @ApiTags('Movimientos')
 @ApiBearerAuth()
 @Controller('movimientos')

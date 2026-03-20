@@ -22,6 +22,8 @@ interface EnvVars {
   APP_NAME: string;
   EMAIL_VERIFICATION_TTL_MIN: number;
   PASSWORD_RESET_TTL_MIN: number;
+  INTERNAL_API_KEY?: string;
+  LOW_STOCK_THRESHOLD: number;
 }
 
 const schema = joi
@@ -46,6 +48,8 @@ const schema = joi
     APP_NAME: joi.string().default('Mercapleno'),
     EMAIL_VERIFICATION_TTL_MIN: joi.number().default(15),
     PASSWORD_RESET_TTL_MIN: joi.number().default(15),
+    INTERNAL_API_KEY: joi.string().min(10).required(),
+    LOW_STOCK_THRESHOLD: joi.number().integer().min(0).default(5),
   })
   .unknown(true);
 
@@ -92,4 +96,6 @@ export const envs = {
   appName: envVars.APP_NAME,
   emailVerificationTtlMin: envVars.EMAIL_VERIFICATION_TTL_MIN,
   passwordResetTtlMin: envVars.PASSWORD_RESET_TTL_MIN,
+  internalApiKey: envVars.INTERNAL_API_KEY,
+  lowStockThreshold: envVars.LOW_STOCK_THRESHOLD,
 };

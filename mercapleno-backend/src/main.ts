@@ -22,9 +22,16 @@ async function bootstrap() {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Mercapleno API')
-    .setDescription('Backend migrado a NestJS para Mercapleno')
+    .setDescription('Lo más fino del pedazo')
     .setVersion('2.0.0')
     .addBearerAuth()
+    .addSecurity( 'x-api-key', {
+      type: 'apiKey',
+      in: 'header',
+      name: 'x-api-key',
+      description: 'Clave API para acceso a rutas protegidas',
+    }
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

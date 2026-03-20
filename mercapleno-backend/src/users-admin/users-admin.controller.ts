@@ -1,11 +1,14 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { CreateUserAdminDto } from './dto/create-user-admin.dto';
 import { UpdateUserAdminDto } from './dto/update-user-admin.dto';
 import { UsersAdminService } from './users-admin.service';
+import { Roles } from '../auth/decorators/roles.decorator';
 
+@Roles(1) //validacion del rol
 @ApiTags('Admin Users')
 @ApiBearerAuth()
+@ApiSecurity('x-api-key')
 @Controller('admin/users')
 export class UsersAdminController {
   constructor(private readonly usersAdminService: UsersAdminService) {}
