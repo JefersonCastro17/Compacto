@@ -3,10 +3,12 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { PoolConnection } from 'mysql2/promise';
 import { MysqlService } from '../common/database/mysql.service';
 import { buildLowStockAlert, getLowStockMetadata, LowStockAlert } from '../common/stock/low-stock.util';
+import { EmailService } from '../email/email.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 
 const DOCUMENTO_VENTA_ID = 'CC';
@@ -14,7 +16,12 @@ const MOVIMIENTO_VENTA_ID = 2;
 
 @Injectable()
 export class SalesService {
-  constructor(private readonly db: MysqlService) {}
+  private readonly logger = new Logger(SalesService.name);
+
+  constructor(
+    private readonly db: MysqlService,
+    private readonly emailService: EmailService,
+  ) {}
 
   private resolvePaymentMethod(value: unknown): string | null {
     if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
@@ -218,20 +225,32 @@ export class SalesService {
       }
 
       await connection.commit();
+      const warnings = Array.from(lowStockAlerts.values());
+
+      if (warnings.length > 0) {
+        this.logger.log(
+          `Se detecto stock bajo para ${warnings.length} producto(s) tras venta. Se intentara notificar por correo.`,
+        );
+        await this.notifyLowStockAdmins(warnings, 'registro de venta');
+      }
+
       return {
         message: 'Venta registrada con exito',
         ticketId: String(idVenta),
         total: dto.total,
-        ...(lowStockAlerts.size > 0 ? { warnings: Array.from(lowStockAlerts.values()) } : {}),
+        ...(warnings.length > 0 ? { warnings } : {}),
       };
     } catch (error) {
-      if (connection) {
-        await connection.rollback();
-      }
+      await this.rollbackSafely(connection, 'createOrder', error);
 
       if (error instanceof BadRequestException || error instanceof ConflictException) {
         throw error;
       }
+
+      this.logger.error(
+        `No se pudo procesar la venta: ${this.describeError(error)}`,
+        error instanceof Error ? error.stack : undefined,
+      );
 
       throw new InternalServerErrorException({
         error: 'Error Interno del Servidor',
@@ -241,6 +260,46 @@ export class SalesService {
       if (connection) {
         connection.release();
       }
+    }
+  }
+
+  private async rollbackSafely(connection: PoolConnection | null, context: string, originalError: unknown) {
+    if (!connection) {
+      return;
+    }
+
+    try {
+      await connection.rollback();
+    } catch (rollbackError) {
+      this.logger.warn(
+        `No se pudo hacer rollback en ${context}. Error original: ${this.describeError(
+          originalError,
+        )}. Error de rollback: ${this.describeError(rollbackError)}`,
+      );
+    }
+  }
+
+  private describeError(error: unknown) {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Error desconocido';
+    }
+  }
+
+  private async notifyLowStockAdmins(alerts: LowStockAlert[], source: string) {
+    try {
+      await this.emailService.sendLowStockAlertToAdmins(alerts, source);
+    } catch (error) {
+      this.logger.warn(`No se pudo enviar correo de stock bajo: ${this.describeError(error)}`);
     }
   }
 }

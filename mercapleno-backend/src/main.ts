@@ -1,14 +1,21 @@
-﻿import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { AppModule } from './app.module';
 import { envs } from './config';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const uploadsRoot = join(process.cwd(), 'uploads');
+
+  mkdirSync(uploadsRoot, { recursive: true });
 
   app.setGlobalPrefix('api');
   app.enableCors();
+  app.useStaticAssets(uploadsRoot, { prefix: '/uploads/' });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -22,16 +29,15 @@ async function bootstrap() {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Mercapleno API')
-    .setDescription('Lo más fino del pedazo')
+    .setDescription('Lo mas fino del pedazo')
     .setVersion('2.0.0')
     .addBearerAuth()
-    .addSecurity( 'x-api-key', {
+    .addSecurity('x-api-key', {
       type: 'apiKey',
       in: 'header',
       name: 'x-api-key',
       description: 'Clave API para acceso a rutas protegidas',
-    }
-    )
+    })
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

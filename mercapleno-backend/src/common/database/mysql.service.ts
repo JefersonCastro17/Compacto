@@ -16,6 +16,8 @@ export class MysqlService implements OnModuleDestroy {
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
+      enableKeepAlive: true,
+      keepAliveInitialDelay: 0,
     });
   }
 

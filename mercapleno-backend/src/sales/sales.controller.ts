@@ -1,6 +1,7 @@
-﻿import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Public } from '../auth/decorators/public.decorator';
 import { AuthUser } from '../auth/interfaces/auth-user.interface';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { SalesService } from './sales.service';
@@ -12,6 +13,7 @@ export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 
   @Get('products')
+  @Public()
   @ApiOperation({ summary: 'Obtener catalogo de productos filtrado' })
   @ApiQuery({ name: 'search', required: false })
   @ApiQuery({ name: 'category', required: false })
@@ -32,6 +34,7 @@ export class SalesController {
   }
 
   @Get('categories')
+  @Public()
   @ApiOperation({ summary: 'Obtener categorias disponibles para venta' })
   getCategories() {
     return this.salesService.getAvailableCategories();

@@ -1,12 +1,18 @@
-import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { PoolConnection } from 'mysql2/promise';
 import { MysqlService } from '../common/database/mysql.service';
 import { buildLowStockAlert, getLowStockMetadata, LowStockAlert } from '../common/stock/low-stock.util';
+import { EmailService } from '../email/email.service';
 import { RegisterMovementDto } from './dto/register-movement.dto';
 
 @Injectable()
 export class InventoryService {
-  constructor(private readonly db: MysqlService) {}
+  private readonly logger = new Logger(InventoryService.name);
+
+  constructor(
+    private readonly db: MysqlService,
+    private readonly emailService: EmailService,
+  ) {}
 
   async getProductsWithStock() {
     const sql = `
@@ -21,9 +27,11 @@ export class InventoryService {
     const [rows] = await this.db.query<any[]>(sql);
     return rows.map((row: any) => {
       const stock = Number(row.stock || 0);
+      const precio = Number(row.precio || 0);
 
       return {
         ...row,
+        precio: Number.isFinite(precio) ? precio : 0,
         stock,
         ...getLowStockMetadata(stock),
       };
@@ -51,10 +59,16 @@ export class InventoryService {
           [dto.id_producto, dto.cantidad, dto.comentario || null, dto.id_documento, id_usuario, id_mov_db],
         );
 
-        await connection.execute(
+        const [updateResult] = await connection.execute(
           'UPDATE stock_actual SET stock = stock + ? WHERE id_productos = ?',
           [dto.cantidad, dto.id_producto],
         );
+
+        if ((updateResult as { affectedRows?: number }).affectedRows === 0) {
+          throw new BadRequestException({
+            error: 'No existe un registro de stock para el producto seleccionado',
+          });
+        }
       } else {
         const [[stockRow]] = await connection.query<any[]>(
           'SELECT stock FROM stock_actual WHERE id_productos = ? FOR UPDATE',
@@ -74,10 +88,16 @@ export class InventoryService {
           [dto.id_producto, dto.cantidad, dto.id_documento, id_usuario, id_mov_db],
         );
 
-        await connection.execute(
+        const [updateResult] = await connection.execute(
           'UPDATE stock_actual SET stock = stock - ? WHERE id_productos = ?',
           [dto.cantidad, dto.id_producto],
         );
+
+        if ((updateResult as { affectedRows?: number }).affectedRows === 0) {
+          throw new BadRequestException({
+            error: 'No existe un registro de stock para el producto seleccionado',
+          });
+        }
       }
 
       const stockSnapshot = await this.getStockSnapshot(connection, dto.id_producto);
@@ -86,18 +106,29 @@ export class InventoryService {
       }
 
       await connection.commit();
+
+      if (lowStockAlert) {
+        this.logger.log(
+          `Se detecto stock bajo para producto ${lowStockAlert.productId} tras movimiento. Se intentara notificar por correo.`,
+        );
+        await this.notifyLowStockAdmins([lowStockAlert], 'registro de movimiento de inventario');
+      }
+
       return {
         message: 'Movimiento registrado con exito',
         ...(lowStockAlert ? { warning: lowStockAlert } : {}),
       };
     } catch (error) {
-      if (connection) {
-        await connection.rollback();
-      }
+      await this.rollbackSafely(connection, 'registerMovement', error);
 
       if (error instanceof BadRequestException) {
         throw error;
       }
+
+      this.logger.error(
+        `No se pudo registrar el movimiento: ${this.describeError(error)}`,
+        error instanceof Error ? error.stack : undefined,
+      );
 
       throw new InternalServerErrorException({ error: 'No se pudo registrar el movimiento' });
     } finally {
@@ -129,5 +160,45 @@ export class InventoryService {
       nombre: row.nombre ? String(row.nombre) : undefined,
       stock: Number(row.stock || 0),
     };
+  }
+
+  private async rollbackSafely(connection: PoolConnection | null, context: string, originalError: unknown) {
+    if (!connection) {
+      return;
+    }
+
+    try {
+      await connection.rollback();
+    } catch (rollbackError) {
+      this.logger.warn(
+        `No se pudo hacer rollback en ${context}. Error original: ${this.describeError(
+          originalError,
+        )}. Error de rollback: ${this.describeError(rollbackError)}`,
+      );
+    }
+  }
+
+  private describeError(error: unknown) {
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    if (typeof error === 'string') {
+      return error;
+    }
+
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return 'Error desconocido';
+    }
+  }
+
+  private async notifyLowStockAdmins(alerts: LowStockAlert[], source: string) {
+    try {
+      await this.emailService.sendLowStockAlertToAdmins(alerts, source);
+    } catch (error) {
+      this.logger.warn(`No se pudo enviar correo de stock bajo: ${this.describeError(error)}`);
+    }
   }
 }

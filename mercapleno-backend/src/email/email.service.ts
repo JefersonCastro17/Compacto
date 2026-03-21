@@ -1,10 +1,15 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import { LowStockAlert } from '../common/stock/low-stock.util';
 import { envs } from '../config';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter | null = null;
+  private readonly logger = new Logger(EmailService.name);
+
+  constructor(private readonly prisma: PrismaService) {}
 
   private getTransporter(): nodemailer.Transporter {
     if (this.transporter) {
@@ -52,7 +57,7 @@ export class EmailService {
 
   async sendVerificationCode(email: string, code: string, ttlMin: number): Promise<void> {
     const transporter = this.getTransporter();
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: this.fromAddress(),
       to: email,
       subject: `${envs.appName} - Codigo de verificacion`,
@@ -65,11 +70,13 @@ export class EmailService {
         </div>
       `,
     });
+
+    this.logger.log(`Correo de verificacion enviado a ${email}. Message ID: ${info.messageId}`);
   }
 
   async sendPasswordResetCode(email: string, code: string, ttlMin: number): Promise<void> {
     const transporter = this.getTransporter();
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: this.fromAddress(),
       to: email,
       subject: `${envs.appName} - Recuperar contrasena`,
@@ -82,5 +89,85 @@ export class EmailService {
         </div>
       `,
     });
+
+    this.logger.log(`Correo de recuperacion enviado a ${email}. Message ID: ${info.messageId}`);
+  }
+
+  async sendLowStockAlertToAdmins(alerts: LowStockAlert[], source: string): Promise<void> {
+    if (!alerts.length) {
+      return;
+    }
+
+    const admins = await this.prisma.usuarios.findMany({
+      where: { id_rol: 1 },
+      select: { email: true },
+    });
+
+    const recipientEmails = Array.from(
+      new Set(
+        admins
+          .map((admin) => admin.email?.trim().toLowerCase())
+          .filter((email): email is string => Boolean(email)),
+      ),
+    );
+
+    if (!recipientEmails.length) {
+      this.logger.warn('No hay administradores con correo disponible para alerta de stock bajo');
+      return;
+    }
+
+    const transporter = this.getTransporter();
+    const timestamp = new Date().toLocaleString('es-CO', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const sourceLabel = source.trim() || 'operacion del sistema';
+    const summary =
+      alerts.length === 1
+        ? alerts[0].message
+        : `${alerts.length} productos quedaron con stock bajo.`;
+
+    const info = await transporter.sendMail({
+      from: this.fromAddress(),
+      to: recipientEmails.join(','),
+      subject: `${envs.appName} - Alerta de stock bajo`,
+      text: [
+        `Se detecto stock bajo tras ${sourceLabel}.`,
+        `Fecha: ${timestamp}.`,
+        '',
+        ...alerts.map((alert, index) => `${index + 1}. ${alert.message}`),
+      ].join('\n'),
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+          <h2 style="margin-bottom: 8px;">Alerta de stock bajo</h2>
+          <p style="margin: 0 0 8px;">
+            Se detecto stock bajo tras <strong>${sourceLabel}</strong>.
+          </p>
+          <p style="margin: 0 0 16px; color: #64748b;">${timestamp}</p>
+          <p style="margin: 0 0 16px;">${summary}</p>
+          <ul style="padding-left: 18px; margin: 0;">
+            ${alerts
+              .map(
+                (alert) => `
+                  <li style="margin-bottom: 10px;">
+                    <strong>${alert.productName?.trim() || `Producto ID ${alert.productId}`}</strong><br />
+                    ${alert.message}<br />
+                    Umbral configurado: ${alert.threshold}
+                  </li>
+                `,
+              )
+              .join('')}
+          </ul>
+        </div>
+      `,
+    });
+
+    this.logger.log(
+      `Alerta de stock bajo enviada a ${recipientEmails.join(', ')} para ${alerts.length} producto(s). Message ID: ${info.messageId}`,
+    );
   }
 }

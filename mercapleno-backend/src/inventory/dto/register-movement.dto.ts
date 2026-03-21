@@ -1,5 +1,5 @@
 ﻿import { ApiProperty } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
 export class RegisterMovementDto {
   @ApiProperty()
@@ -18,10 +18,12 @@ export class RegisterMovementDto {
 
   @ApiProperty()
   @IsString()
+  @MaxLength(2)
   id_documento: string;
 
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
+  @MaxLength(100)
   comentario?: string;
 }
